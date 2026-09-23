@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { RedisModule } from '../redis/redis.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { NonceController } from './nonce.controller';
 
 @Module({
@@ -30,8 +31,10 @@ import { NonceController } from './nonce.controller';
     RedisModule,
   ],
   controllers: [AuthController, NonceController],
-  providers: [AuthService],
+  providers: [AuthService, JwtAuthGuard],
   // Export AuthService so other modules (e.g. a Guards module) can reuse it.
-  exports: [AuthService, JwtModule],
+  // Export JwtAuthGuard so feature modules can apply the hardened guard
+  // (fail-closed, deny-by-default) without re-registering JWT options.
+  exports: [AuthService, JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}
