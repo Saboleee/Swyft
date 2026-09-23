@@ -84,4 +84,14 @@ export type {
   RouterError,
 } from './router-types';
 
+// #973 — SDK error mapping from contract errors
+export {
+  SdkError,
+  SdkErrorCode,
+  CONTRACT_ERROR_CODE_MAP,
+  mapContractError,
+  withContractErrorMapping,
+} from './errors';
+export type { RawContractError } from './errors';
+
 export { config } from './config';

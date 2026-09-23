@@ -1,44 +1,43 @@
 # Swyft API
 
-NestJS backend for the Swyft concentrated liquidity DEX.
+The Swyft API is the server-side entrypoint for liquidity, trading, and settlement flows. It talks to Stellar (Horizon + Soroban RPC) and to the Swyft contracts deployed on testnet.
 
-## Prerequisites
+## Environment wiring (testnet)
 
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose v2
-- [pnpm](https://pnpm.io/)
-- Node.js ≥ 20
+The API is configured entirely through environment variables. The canonical source of truth for testnet identifiers is [`packages/contract/deployments/TESTNET.md`](../../packages/contract/deployments/TESTNET.md). Copy [`apps/api/.env.example`](./.env.example) to `.env` and fill in the values documented there.
 
-## Environment setup
+Required variables:
 
-```bash
-cp .env.example .env
-```
+| Variable | Purpose |
+| --- | --- |
+| `STELLAR_NETWORK` | Network name (`testnet`). Mainnet is rejected by config validation. |
+| `STELLAR_NETWORK_PASSPHRASE` | Must match the passphrase for `STELLAR_NETWORK`. |
+| `STELLAR_HORIZON_URL` | Horizon endpoint for the selected network. |
+| `STELLAR_SOROBAN_RPC_URL` | Soroban RPC endpoint for the selected network. |
+| `SWYFT_CONTRACT_ID` | Deployed Swyft contract id (testnet). |
+| `SWYFT_ASSET_ISSUER` | Public issuer account for the Swyft asset (testnet). |
 
-All values in `.env.example` match the Docker Compose defaults — no changes needed for local development.
+### Fail-closed behavior
 
-## Starting the stack
+`apps/api/src/config/stellar.config.ts` validates the environment at startup and **fails closed**:
 
-```bash
-# Start Postgres + Redis, then NestJS in watch mode
-pnpm dev
-```
+- A mainnet passphrase or unknown network is rejected.
+- Missing contract ids or asset issuers are rejected.
+- A passphrase that does not match the declared network is rejected (address/network drift).
 
-`docker compose up -d --wait` is run automatically before NestJS starts. Both services must pass their healthchecks before the app boots.
+Validation errors use stable error codes so operators and tests can assert on them. The API will not start with an invalid Stellar configuration.
 
-To start only the infrastructure (without NestJS):
+### Secrets
 
-```bash
-docker compose up -d --wait
-```
+Only public testnet identifiers and URLs belong in `.env.example`. Never commit secret keys, seed phrases, or private credentials. Do not log secret values; log only the stable error codes and non-sensitive identifiers.
 
-## Resetting the database
+## Development
 
-```bash
-docker compose down -v
-docker compose up -d --wait
-```
+See the repository root README for workspace setup. Run the API from `apps/api` after populating `.env` from `.env.example`.
 
-The `-v` flag removes the named `postgres_data` volume, giving you a clean database.
+## Tests
+
+Config validation is covered by `apps/api/src/config/stellar.config.spec.ts`, including valid testnet configuration and negative cases (mainnet passphrase, missing variables, address drift).
 
 ## Service endpoints
 
