@@ -242,40 +242,33 @@ export class AuthService {
     } catch {
       throw this.unauthorized(
         AuthErrorCode.SIGNATURE_INVALID,
-        'Signature is not valid base64 or has an unexpected length',
+        'Signature is malformed',
         correlationId,
       );
     }
 
     const messageBytes = Buffer.from(nonce, 'utf8');
-    const isValid = keypair.verify(messageBytes, signatureBytes);
+    const valid = keypair.verify(messageBytes, signatureBytes);
 
-    if (!isValid) {
+    if (!valid) {
       this.logger.warn(
         `Signature verification failed for wallet ${walletAddress} [cid=${correlationId}]`,
       );
       throw this.unauthorized(
         AuthErrorCode.SIGNATURE_INVALID,
-        'Signature is invalid',
+        'Signature verification failed',
         correlationId,
       );
     }
   }
 
-  /** Signs a JWT payload with the configured secret, expiry, issuer, and audience. */
+  /** Signs a JWT for the verified wallet address. */
   private issueJwt(walletAddress: string): string {
-    const payload: JwtPayload = { sub: walletAddress, walletAddress };
+    const payload: JwtPayload = {
+      sub: walletAddress,
+      walletAddress,
+    };
 
-    // expiresIn is read from JWT_EXPIRES_IN env; falls back to '15m' if unset.
-    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN') ?? '15m';
-
-    const issuer = this.configService.get<string>('JWT_ISSUER');
-    const audience = this.configService.get<string>('JWT_AUDIENCE');
-
-    return this.jwtService.sign(payload, {
-      expiresIn: expiresIn as `${number}m`,
-      ...(issuer ? { issuer } : {}),
-      ...(audience ? { audience } : {}),
-    });
+    return this.jwtService.sign(payload);
   }
 }

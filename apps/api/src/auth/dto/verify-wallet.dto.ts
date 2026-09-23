@@ -32,4 +32,17 @@ export class VerifyWalletDto {
   @IsNotEmpty({ message: 'signature must not be empty' })
   @MaxLength(512, { message: 'signature must be at most 512 characters' })
   signature: string;
+
+  /**
+   * Optional client-supplied correlation id (Freighter/xBull flow).
+   * Echoed back in responses and logs so ops can trace a single verify
+   * attempt across the nonce issue and verify steps without leaking secrets.
+   * Bounded length to prevent log/header injection via adversarial input.
+   */
+  @IsString()
+  @MaxLength(128, { message: 'correlationId must be at most 128 characters' })
+  @Matches(/^[A-Za-z0-9._:-]*$/, {
+    message: 'correlationId must contain only [A-Za-z0-9._:-]',
+  })
+  correlationId?: string;
 }
