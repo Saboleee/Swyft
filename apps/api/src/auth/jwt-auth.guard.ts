@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -17,6 +18,9 @@ interface JwtPayload {
   scope?: string | string[];
   iss?: string;
   aud?: string | string[];
+  role?: string;
+  roles?: string[];
+  exp?: number;
 }
 
 interface RequestWithUser {
@@ -36,6 +40,12 @@ const AUTH_ERROR_CODES = {
   MISSING_WALLET: 'AUTH_MISSING_WALLET',
   FORBIDDEN: 'AUTH_FORBIDDEN',
 } as const;
+
+/**
+ * Roles permitted to invoke the fee-collector money path.
+ * Deny-by-default: any token without one of these roles is rejected.
+ */
+const FEE_COLLECTOR_ROLES = ['fee-collector', 'admin'];
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -85,6 +95,10 @@ export class JwtAuthGuard implements CanActivate {
       throw this.deny(AUTH_ERROR_CODES.INVALID_TOKEN, correlationId);
     }
 
+    // Fail-closed on expiry: reject tokens without a valid future exp claim.
+    if (typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now()) {
+      throw this.deny(AUTH_ERROR_CODES.INVALID_TOKEN, correlationId);
+    }
     const walletAddress =
       payload.walletAddress ??
       payload.wallet ??
@@ -105,6 +119,17 @@ export class JwtAuthGuard implements CanActivate {
     if (roles.length === 0 && scopes.length === 0) {
       this.logger.warn(
         `[${correlationId}] JWT lacks role/scope claims; denying by default`,
+      );
+      throw this.deny(AUTH_ERROR_CODES.FORBIDDEN, correlationId);
+    }
+
+    // Fee-collector money path requires an explicit privileged role.
+    if (
+      roles.length > 0 &&
+      !roles.some((role) => FEE_COLLECTOR_ROLES.includes(role))
+    ) {
+      this.logger.warn(
+        `[${correlationId}] JWT lacks fee-collector role; denying by default`,
       );
       throw this.deny(AUTH_ERROR_CODES.FORBIDDEN, correlationId);
     }

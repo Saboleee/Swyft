@@ -12,6 +12,7 @@ import { Redis } from 'ioredis';
 import * as crypto from 'crypto';
 
 import { REDIS_CLIENT } from '../redis/redis.constants';
+import { NonceDto } from './dto/nonce.dto';
 
 /**
  * Stable, typed error codes for the wallet nonce auth flow.
@@ -73,7 +74,7 @@ export class NonceController {
 
   @Post('nonce')
   @HttpCode(HttpStatus.OK)
-  async issueNonce(@Body() body: { walletAddress?: string } | undefined) {
+  async issueNonce(@Body() body: NonceDto | undefined) {
     if (!body || !body.walletAddress) {
       return {
         nonce: null,
