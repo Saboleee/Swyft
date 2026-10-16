@@ -3,6 +3,52 @@ export interface SwapAmounts {
   amount1: string;
 }
 
+/**
+ * Maximum relative difference tolerated between the USD price used for TVL
+ * and the USD price used for volume within a single stats computation.
+ */
+export const USD_PRICE_CONSISTENCY_TOLERANCE = 0.01;
+
+/**
+ * Typed error thrown when the USD price used for TVL and the USD price used
+ * for volume diverge beyond {@link USD_PRICE_CONSISTENCY_TOLERANCE}.
+ */
+export class UsdPriceConsistencyError extends Error {
+  readonly code = 'USD_PRICE_INCONSISTENT';
+
+  constructor(
+    readonly priceTvl: number,
+    readonly priceVolume: number,
+    readonly tolerance: number = USD_PRICE_CONSISTENCY_TOLERANCE,
+  ) {
+    super(
+      `USD price used for TVL (${priceTvl}) differs from the price used for volume (${priceVolume}) beyond tolerance ${tolerance}`,
+    );
+    this.name = 'UsdPriceConsistencyError';
+  }
+}
+
+/**
+ * Asserts that the USD price used for TVL and the USD price used for volume
+ * within a single stats computation agree within the documented tolerance.
+ * Throws a typed {@link UsdPriceConsistencyError} otherwise.
+ */
+export function assertUsdPriceConsistency(
+  priceTvl: number,
+  priceVolume: number,
+  tolerance: number = USD_PRICE_CONSISTENCY_TOLERANCE,
+): void {
+  if (!Number.isFinite(priceTvl) || !Number.isFinite(priceVolume)) {
+    throw new UsdPriceConsistencyError(priceTvl, priceVolume, tolerance);
+  }
+  const reference = Math.max(Math.abs(priceTvl), Math.abs(priceVolume));
+  if (reference === 0) return;
+  const relativeDiff = Math.abs(priceTvl - priceVolume) / reference;
+  if (relativeDiff > tolerance) {
+    throw new UsdPriceConsistencyError(priceTvl, priceVolume, tolerance);
+  }
+}
+
 export function isInHalfOpenWindow(
   timestamp: Date,
   start: Date,
