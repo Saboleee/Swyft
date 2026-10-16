@@ -22,12 +22,8 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { StatsModule } from './stats/stats.module';
 import { TokensModule } from './tokens/tokens.module';
 import { SearchModule } from './search/search.module';
-import { TicksModule } from './ticks/ticks.module';
-import { FeeCollectorModule } from './fee-collector/fee-collector.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { BalancesModule } from './balances/balances.module';
-import { WebsocketModule } from './websocket/websocket.module';
-import { HealthModule } from './health/health.module';
 import { stellarConfig, resolveStellarConfig, stellarConfigSummary } from './config/stellar.config';
 import { infraConfig } from './config/infra.config';
 import { resolveCorsConfig } from './config/cors.config';
@@ -55,6 +51,8 @@ import { resolveRouterConfig, routerConfigSummary } from './config/router.config
     RateLimitModule,
     AuthModule,
     PriceModule,
+    // PoolsModule owns the ticks route (see pools.controller.ts and
+    // dto/get-ticks-query.dto.ts); there is no separate TicksModule.
     PoolsModule,
     PositionsModule,
     SwapsModule,
@@ -67,25 +65,8 @@ import { resolveRouterConfig, routerConfigSummary } from './config/router.config
     StatsModule,
     SearchModule,
     TokensModule,
-    TicksModule,
-    // Fee collector: fee accumulation + FEE_COLLECTOR_AUTH (issue #965).
-    // Registered after AuthModule so the deny-by-default guard can resolve
-    // the auth service; writes fail closed when dependencies are unavailable.
-    FeeCollectorModule,
     TransactionsModule,
     BalancesModule,
-    // WebSocket reconnect (issue #991): typed reconnect entrypoints with
-    // stable error codes, correlation ids, deny-by-default authz on
-    // privileged channels, and idempotent resubscription. Registered after
-    // AuthModule so the reconnect guard can resolve the auth service and
-    // fail closed when dependencies are unavailable.
-    WebsocketModule,
-    // Health/ready separation (issue #1081): liveness (/health) stays
-    // dependency-free while readiness (/health/ready) reflects critical
-    // dependency availability (DB/Redis/RPC) and fails closed with a stable
-    // typed error code when any critical dependency is unavailable. No
-    // secrets, connection strings, or internal hostnames are exposed.
-    HealthModule,
   ],
 })
 export class AppModule implements NestModule {
